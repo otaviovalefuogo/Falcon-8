@@ -1,0 +1,39 @@
+inicio_sfi:
+    # 1. Leitura dos Sensores
+    00: LW   R1, 16(R0)       # 0x2210 | R1 = Distância Frontal (0x10)
+    01: LW   R2, 17(R0)       # 0x2411 | R2 = Velocidade Atual (0x11)
+    02: LW   R3, 18(R0)       # 0x2612 | R3 = Limite Segurança (0x12)
+    03: LW   R4, 19(R0)       # 0x2813 | R4 = Velocidade Permitida (0x13)
+
+    # 2. Verificação de Distância
+    04: SLT  R5, R1, R3       # 0x0A5C | R5 = (Distância < Limite Segurança) ? 1 : 0
+    05: BEQ  R5, R0, 9        # 0x4A09 | Se Dist >= Limite, pula 9 inst. -> (Vai para NORMAL)
+
+    # 3. Verificação de Velocidade
+    06: SLT  R5, R4, R2       # 0x0B14 | R5 = (Vel. Permitida < Vel. Atual) ? 1 : 0
+    07: BEQ  R5, R0, 4        # 0x4A04 | Se Vel. Atual <= Vel. Permitida, pula 4 inst. -> (Vai para ALERTA)
+
+emergencia:
+    # 4. Estado de Emergência (Rápido e Muito Perto)
+    08: ADDI R6, R0, 2        # 0x1C02 | R6 = 2 (Comando Freio Emergência)
+    09: ADDI R7, R0, 2        # 0x1E02 | R7 = 2 (Status Emergência)
+    10: JAL  R0, 6            # 0x6006 | Pula 6 inst. -> (Vai para GRAVAR)
+
+alerta:
+    # 5. Estado de Alerta (Perto, mas dentro do limite de velocidade)
+    11: ADDI R6, R0, 1        # 0x1C01 | R6 = 1 (Comando Freio Leve/Alerta)
+    12: ADDI R7, R0, 1        # 0x1E01 | R7 = 1 (Status Alerta)
+    13: JAL  R0, 3            # 0x6003 | Pula 3 inst. -> (Vai para GRAVAR)
+
+normal:
+    # 6. Estado Normal (Distância Segura)
+    14: ADDI R6, R0, 0        # 0x1C00 | R6 = 0 (Comando Freio Desativado)
+    15: ADDI R7, R0, 0        # 0x1E00 | R7 = 0 (Status Normal)
+
+gravar:
+    # 7. Escrita nos Atuadores (Usando R0 como ponteiro base)
+    16: SW   R6, 32(R0)       # 0x3C20 | Grava Comando de Freio na Mem[0x20]
+    17: SW   R7, 33(R0)       # 0x3E21 | Grava Status do Sistema na Mem[0x21]
+    
+    # 8. Loop Infinito
+    18: JAL  R0, -18          # 0x61EE | Volta 18 instruções (Para a linha 00)
