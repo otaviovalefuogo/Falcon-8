@@ -1,0 +1,28 @@
+Endereço  Hexa   Assembly            O que a lógica faz?
+
+0x00      1A 11  ADDI R5, R0, 17     Aponta para Mem[0x11] (Base CVA)
+0x02      23 40  LW R1, 0(R5)        Lê a Sua Vel. Atual [0x11] -> R1
+0x04      25 44| LW R2, 4(R5)        Lê a Dist. Frente [0x15] -> R2
+0x06      27 43  LW R3, 3(R5)        Lê a Vel. Comboio [0x14] -> R3
+0x08      18 0A  ADDI R4, R0, 10     Limite Mínimo CVA = 10m no R4
+0x0A      1A 14  ADDI R5, R0, 20     Limite Máximo CVA = 20m no R5
+0x0C      85 04  BLT R2, R4, 4       Juiz 1: Se Dist < 10m, pula pro FREAR
+0x0E      8A 86  BLT R5, R2, 6       Juiz 2: Se 20m < Dist, pula pro ACELERAR
+0x10      1C C0  ADDI R6, R3, 0      MANTER: Copia R3 pro R6 (Intermediária)
+0x12      60 05  JAL R0, 5           Fuga do Manter: Pula pra Polícia (0x1C)
+0x14      1E 01  ADDI R7, R0, 1      FREAR P1: Põe 1 no R7
+0x16      0C 7E  SRL R6, R1, R7      FREAR P2: Divide a Vel. Atual por 2
+0x18      60 02  JAL R0, 2           Fuga do Freio: Pula pra Polícia (0x1C)
+0x1A      7C 41  SLLI R6, R1, 1      ACELERAR: Dobra a Vel. Atual
+0x1C      18 1E  ADDI R4, R0, 30     POLÍCIA: Põe 30 no R4
+0x1E      79 02  SLLI R4, R4, 2      POLÍCIA: Multiplica R4 por 4 (Trava 120)
+0x20      8D 02  BLT R6, R4, 2       Se Vel. Alvo < 120, deixa passar pro PWM
+0x22      0D 00  ADD R6, R4, R0      A Trava: Força a Vel. Alvo a virar 120
+0x24      1E 11  ADDI R7, R0, 17     Carrega Base FÍSICA = 17
+0x26      3D D2  SW R6, 18(R7)       PAINEL: Grava Vel. Alvo no end. 0x23
+0x28      7B 81  SLLI R5, R6, 1      PWM P1: R5 = Vel. Alvo * 2
+0x2A      18 03  ADDI R4, R0, 3      Põe 3 no R4 (Para o Shift Right)
+0x2C      09 A6  SRL R4, R6, R4      PWM P2: R4 = Vel. Alvo / 8
+0x2E      0D 60  ADD R6, R5, R4      PWM Final: Soma R5 + R4 (Valor motor)
+0x30      3D D1  SW R6, 17(R7)       MOTOR: Grava PWM final no end. 0x22
+0x32      61 E7  JAL R0, -25         LOOP: Volta pro 0x00 p/ reiniciar ciclo
